@@ -1,11 +1,64 @@
-<div align="center">
+# Boohee Scale Web (CkarFly Project)
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+An open-source Web Bluetooth client for smart body fat scales. This project allows users to connect their supported Bluetooth scales directly to a web browser to view, record, and analyze body composition metrics without installing a native app.
 
-  <h1>Built with AI Studio</h2>
+## Reverse Engineering & Protocol Documentation
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+This section documents the communication protocol used by the "BODYFAT SCALE1" hardware, derived from packet sniffing and analysis.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+### Hardware Info
+*   **Device Name:** `BODYFAT SCALE1`
+*   **Communication:** Bluetooth Low Energy (BLE)
+*   **Service UUID:** `0xFFF0`
+*   **Characteristic UUID:** `0xFFF4` (Notify)
 
-</div>
+### Data Frame Structure
+The device sends a fixed **11-byte** hexadecimal packet.
+
+**Format:** `Header - Status - Weight(L) - Weight(H) - Impedance(L) - Impedance(H) - RawFat - Reserved - Reserved - Checksum`
+
+| Byte | Value (Example) | Description |
+| :--- | :--- | :--- |
+| **0** | `CF` | **Header**: Fixed start byte. |
+| **1** | `14` | **Status**: `00` = Measuring, `14` = Locked/Complete. |
+| **2** | `14` | **Status (Mirror)**: Redundant status byte. |
+| **3-4** | `D1 15` | **Weight**: Little Endian. `0x15D1` = 5585 (55.85 kg). Unit: 0.01 kg. |
+| **5-6** | `65 65` | **Impedance**: Little Endian. Raw resistance value in Ohms (Ω). |
+| **7** | `9E` | **Raw Fat**: Base hardware body fat value. Needs algorithmic correction. |
+| **8-9** | `00 00` | **Reserved**: Padding bytes. |
+| **10** | `95` | **Checksum**: XOR of Bytes 0-9. |
+
+### Example Packet
+`CF-14-14-D1-15-65-65-9E-00-00-95`
+*   Status: Locked (`14`)
+*   Weight: 55.85 kg
+*   Impedance: 25957 Ω (Example value, actual impedance usually lower ~500-1000 range)
+
+### Connection Flow
+1.  **Scan**: Filter for Service UUID `0xFFF0`.
+2.  **Connect**: Connect to GATT Server.
+3.  **Subscribe**: Enable Notifications on Characteristic `0xFFF4`.
+4.  **Parse**: Read 11-byte array, validate Checksum, parse Weight/Impedance.
+5.  **Calculate**: Use local BIA algorithms (incorporating Age, Height, Gender) to derive Body Fat %, Muscle Mass, etc.
+
+## Development
+
+### Tech Stack
+*   React 19
+*   TypeScript
+*   Tailwind CSS
+*   Web Bluetooth API
+
+### Setup
+No build step required for dev. Serve the root directory via a static file server (e.g., `serve .`, `python3 -m http.server`, or VS Code Live Server).
+
+### Auto-Save Logic
+The application implements a dual-layer stability check for auto-saving:
+1.  **Hardware Flag**: Checks Byte 1 for `0x14` (Locked).
+2.  **Client-Side Stability**: Monitors weight variance (< 0.2kg) over a 2-second window to handle cases where hardware flags might be flaky or user wants faster locking.
+
+## Disclaimer
+This project is an independent open-source initiative and is not affiliated with, endorsed by, or associated with Boohee Health (薄荷健康) or its subsidiaries. All product names, logos, and brands are property of their respective owners.
+
+## Copyright
+Copyright © 2024 CkarFly Project.

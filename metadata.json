@@ -1,0 +1,7 @@
+{
+  "name": "Boohee Scale Web",
+  "description": "Web Bluetooth client for smart body fat scales. Connects, records, and analyzes body composition metrics.",
+  "requestFramePermissions": [
+    "bluetooth"
+  ]
+}
