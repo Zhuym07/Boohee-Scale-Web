@@ -43,7 +43,7 @@ interface Bluetooth {
 
 declare global {
   interface Navigator {
-    bluetooth: Bluetooth;
+    bluetooth?: Bluetooth;
   }
 }
 
@@ -51,18 +51,31 @@ export class BluetoothService {
   private device: BluetoothDevice | null = null;
   private server: BluetoothRemoteGATTServer | null = null;
   private characteristic: BluetoothRemoteGATTCharacteristic | null = null;
+  private dataHandler: EventListener | null = null;
+  private disconnectHandler: EventListener | null = null;
 
   /**
    * Request and connect to the Bluetooth device
    */
   async connect(onDataReceived: (data: ScaleData) => void, onDisconnect: () => void): Promise<void> {
+    await this.disconnect();
+
+    if (!navigator.bluetooth) {
+      throw new Error('Web Bluetooth is not supported in this browser');
+    }
+
     try {
       this.device = await navigator.bluetooth.requestDevice({
         filters: [{ services: [SERVICE_UUID] }],
-        optionalServices: [SERVICE_UUID] // Redundant but safe for some browsers
+        optionalServices: [SERVICE_UUID]
       });
 
-      this.device.addEventListener('gattserverdisconnected', onDisconnect);
+      this.disconnectHandler = () => {
+        this.removeListeners();
+        this.resetConnection();
+        onDisconnect();
+      };
+      this.device.addEventListener('gattserverdisconnected', this.disconnectHandler);
 
       if (!this.device.gatt) {
         throw new Error('GATT server not available');
@@ -73,7 +86,7 @@ export class BluetoothService {
       this.characteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
       await this.characteristic.startNotifications();
-      this.characteristic.addEventListener('characteristicvaluechanged', (event: Event) => {
+      this.dataHandler = (event: Event) => {
         const value = (event.target as BluetoothRemoteGATTCharacteristic).value;
         if (value) {
           const parsedData = this.parseScaleData(value);
@@ -81,18 +94,46 @@ export class BluetoothService {
             onDataReceived(parsedData);
           }
         }
-      });
+      };
+      this.characteristic.addEventListener('characteristicvaluechanged', this.dataHandler);
 
     } catch (error) {
+      await this.disconnect();
       console.error('Connection failed', error);
       throw error;
     }
   }
 
-  disconnect() {
+  async disconnect(): Promise<void> {
+    const characteristic = this.characteristic;
+    this.removeListeners();
+
+    if (characteristic) {
+      try {
+        await characteristic.stopNotifications();
+      } catch {
+        // The device may already be disconnected.
+      }
+    }
+
     if (this.device && this.device.gatt && this.device.gatt.connected) {
       this.device.gatt.disconnect();
     }
+    this.resetConnection();
+  }
+
+  private removeListeners(): void {
+    if (this.characteristic && this.dataHandler) {
+      this.characteristic.removeEventListener('characteristicvaluechanged', this.dataHandler);
+    }
+    if (this.device && this.disconnectHandler) {
+      this.device.removeEventListener('gattserverdisconnected', this.disconnectHandler);
+    }
+    this.dataHandler = null;
+    this.disconnectHandler = null;
+  }
+
+  private resetConnection(): void {
     this.device = null;
     this.server = null;
     this.characteristic = null;

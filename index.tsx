@@ -1,15 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import './styles.css';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').then(
       (registration) => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        console.info('Service worker registered:', registration.scope);
       },
       (err) => {
-        console.log('ServiceWorker registration failed: ', err);
+        console.warn('Service worker registration failed:', err);
       }
     );
   });

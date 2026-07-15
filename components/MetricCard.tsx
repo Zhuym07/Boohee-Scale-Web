@@ -12,28 +12,23 @@ interface MetricCardProps {
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({ label, value, unit, evaluation, description }) => {
-  let statusColor = 'text-gray-400';
   let badgeColor = 'bg-gray-800 text-gray-400';
 
   if (evaluation) {
     const s = evaluation.status;
     if (s === 'normal') {
-      statusColor = 'text-green-400';
       badgeColor = 'bg-green-500/20 text-green-400';
     } else if (s === 'low' || s === 'underweight') {
-      statusColor = 'text-blue-400';
       badgeColor = 'bg-blue-500/20 text-blue-400';
     } else if (s === 'high' || s === 'overweight') {
-      statusColor = 'text-yellow-400';
       badgeColor = 'bg-yellow-500/20 text-yellow-400';
     } else if (s === 'veryHigh' || s === 'obese') {
-      statusColor = 'text-red-400';
       badgeColor = 'bg-red-500/20 text-red-400';
     }
   }
 
   return (
-    <div className="bg-surface rounded-2xl p-6 border border-slate-700 shadow-lg hover:border-boohee/50 transition-colors flex flex-col justify-between">
+    <article className="bg-surface rounded-lg p-5 border border-slate-700 shadow-lg hover:border-boohee/50 transition-colors flex flex-col justify-between min-h-[126px]">
       <div>
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-gray-400 text-xs font-bold uppercase tracking-wider">{label}</h3>
@@ -50,6 +45,6 @@ export const MetricCard: React.FC<MetricCardProps> = ({ label, value, unit, eval
           {evaluation.label}
         </div>
       )}
-    </div>
+    </article>
   );
 };

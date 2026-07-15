@@ -50,12 +50,33 @@ The device sends a fixed **11-byte** hexadecimal packet.
 *   Web Bluetooth API
 
 ### Setup
-No build step required for dev. Serve the root directory via a static file server (e.g., `serve .`, `python3 -m http.server`, or VS Code Live Server).
+
+Web Bluetooth requires a secure context. Use `localhost` during development and HTTPS in production.
+
+```bash
+npm install
+npm run dev
+```
+
+Create and verify a production build with:
+
+```bash
+npm run check
+npm run preview
+```
+
+The production files are written to `dist/`. Do not serve the TypeScript source directory directly.
 
 ### Auto-Save Logic
 The application implements a dual-layer stability check for auto-saving:
 1.  **Hardware Flag**: Checks Byte 1 for `0x14` (Locked).
 2.  **Client-Side Stability**: Monitors weight variance (< 0.2kg) over a 2-second window to handle cases where hardware flags might be flaky or user wants faster locking.
+
+### Body Composition Estimation
+
+Body fat is an estimate, not a medical measurement. For plausible foot-to-foot impedance readings (200–1500 Ω), the app estimates fat-free mass from height, weight, and impedance, then blends that result with an adult demographic estimate to reduce sensitivity to hydration and contact quality. Invalid or physiologically implausible impedance values fall back to the demographic estimate.
+
+The displayed lean-mass rate is `100% - body fat %`; it is not labeled as skeletal muscle because this scale packet does not provide enough information to calculate skeletal muscle reliably. Total body water is estimated as 73.2% of fat-free mass.
 
 ## Disclaimer
 This project is an independent open-source initiative and is not affiliated with, endorsed by, or associated with Boohee Health (薄荷健康) or its subsidiaries. All product names, logos, and brands are property of their respective owners.

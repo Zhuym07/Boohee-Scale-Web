@@ -9,6 +9,11 @@ export interface UserProfile {
   gender: Gender;
 }
 
+export const PROFILE_LIMITS = {
+  age: { min: 18, max: 100 },
+  height: { min: 100, max: 250 }
+} as const;
+
 export interface ScaleData {
   weight: number; // kg
   impedance: number; // ohm
@@ -21,9 +26,12 @@ export interface ScaleData {
 export interface BodyMetrics {
   bmi: number;
   bodyFatPercentage: number;
+  leanMassRate: number;
+  /** Kept for reading history created before leanMassRate was introduced. */
   muscleRate?: number;
   waterRate?: number;
   bmr?: number;
+  bodyFatMethod: 'bia' | 'demographic';
 }
 
 export interface BleDeviceError {

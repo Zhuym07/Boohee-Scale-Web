@@ -8,6 +8,7 @@ export const translations = {
     status: {
       offline: "OFFLINE",
       connected: "CONNECTED",
+      connecting: "CONNECTING...",
       measuring: "MEASURING...",
       locked: "LOCKED",
       ready: "Ready",
@@ -15,21 +16,26 @@ export const translations = {
       deviceStatus: "Device Status",
       streaming: "Streaming Data...",
       held: "Displaying Saved/Held Data",
-      waiting: "Waiting for data..."
+      waiting: "Waiting for data...",
+      rawPacket: "Raw Packet"
     },
     metrics: {
       weight: "Weight",
       bmi: "BMI",
       bodyFat: "Body Fat",
-      muscle: "Muscle Rate",
+      bodyComposition: "Body Composition",
+      leanMass: "Lean Mass",
       water: "Water Rate",
       bmr: "BMR",
+      estimateNotice: "Body composition varies with hydration, meals, exercise, and foot contact. Use trends measured under similar conditions; these values are not for medical diagnosis.",
       impedance: "Impedance",
-      rawFat: "Raw Fat (Dev)",
+      rawFat: "Device Estimate",
       desc: {
         bmi: "Body Mass Index",
-        bodyFat: "Estimated via BIA",
-        muscle: "Skeletal Muscle Mass",
+        bodyFat: "Estimated body fat",
+        bodyFatBia: "Impedance-adjusted estimate",
+        bodyFatFallback: "Demographic estimate",
+        leanMass: "Body weight excluding fat",
         water: "Total Body Water",
         bmr: "Basal Metabolic Rate"
       }
@@ -57,6 +63,7 @@ export const translations = {
     history: {
       title: "History",
       clear: "Clear All",
+      delete: "Delete record",
       empty: "No history yet. Connect scale and weigh yourself!",
       cols: {
         date: "Date & Time",
@@ -77,20 +84,24 @@ export const translations = {
       heightDesc: "Essential for BMI calculation.",
       next: "Next Step",
       finish: "Finish Setup",
+      back: "Previous step",
       years: "years",
       cm: "cm"
     },
     footer: {
-      copyright: "Copyright © 2024 CkarFly Project. All rights reserved.",
+      copyright: "Copyright © 2024–2026 CkarFly Project. All rights reserved.",
       disclaimer: "Disclaimer: This project is an independent open-source initiative and is not affiliated with, endorsed by, or associated with Boohee Health (薄荷健康) or its subsidiaries. All product names, logos, and brands are property of their respective owners."
     },
     controls: {
         autoSave: "AUTO-SAVE",
-        saveReading: "Save Reading"
+        saveReading: "Save Reading",
+        language: "Switch language",
+        close: "Close"
     },
     errors: {
         dismiss: "Dismiss",
-        connectFail: "Failed to connect to device"
+        connectFail: "Failed to connect to the scale. Wake it up and try again.",
+        unsupported: "Web Bluetooth is not supported. Use Chrome or Edge on a secure page."
     },
     instructions: {
         readyTitle: "Ready to Measure",
@@ -104,6 +115,7 @@ export const translations = {
     status: {
       offline: "离线",
       connected: "已连接",
+      connecting: "连接中...",
       measuring: "测量中...",
       locked: "已锁定",
       ready: "准备就绪",
@@ -111,21 +123,26 @@ export const translations = {
       deviceStatus: "设备状态",
       streaming: "正在接收数据...",
       held: "显示已保存/锁定数据",
-      waiting: "等待数据..."
+      waiting: "等待数据...",
+      rawPacket: "原始数据包"
     },
     metrics: {
       weight: "体重",
       bmi: "BMI",
       bodyFat: "体脂率",
-      muscle: "肌肉率",
+      bodyComposition: "身体成分",
+      leanMass: "去脂体重率",
       water: "水分率",
       bmr: "基础代谢",
+      estimateNotice: "身体成分会受饮水、进食、运动和足部接触影响。请在相近条件下观察长期趋势，结果不用于医疗诊断。",
       impedance: "阻抗",
-      rawFat: "原始体脂(Dev)",
+      rawFat: "设备原始估值",
       desc: {
         bmi: "身体质量指数",
-        bodyFat: "BIA 生物阻抗估算",
-        muscle: "骨骼肌质量",
+        bodyFat: "体脂估算值",
+        bodyFatBia: "结合阻抗修正的估算",
+        bodyFatFallback: "基于 BMI、年龄和性别估算",
+        leanMass: "体重中非脂肪部分",
         water: "身体总水分",
         bmr: "基础代谢率"
       }
@@ -153,6 +170,7 @@ export const translations = {
     history: {
       title: "历史记录",
       clear: "清空",
+      delete: "删除记录",
       empty: "暂无记录。请连接体脂秤并称重！",
       cols: {
         date: "日期时间",
@@ -173,20 +191,24 @@ export const translations = {
       heightDesc: "用于计算 BMI。",
       next: "下一步",
       finish: "完成设置",
+      back: "上一步",
       years: "岁",
       cm: "厘米"
     },
     footer: {
-      copyright: "版权所有 © 2024 CkarFly Project。",
+      copyright: "版权所有 © 2024–2026 CkarFly Project。",
       disclaimer: "免责声明：本项目是一个独立的开源计划，不隶属于薄荷健康（Boohee Health）或其子公司，也未得到其认可或关联。所有产品名称、徽标和品牌均为其各自所有者的财产。"
     },
     controls: {
         autoSave: "自动保存",
-        saveReading: "保存数据"
+        saveReading: "保存数据",
+        language: "切换语言",
+        close: "关闭"
     },
     errors: {
         dismiss: "忽略",
-        connectFail: "连接设备失败"
+        connectFail: "连接体脂秤失败，请唤醒设备后重试。",
+        unsupported: "当前浏览器不支持 Web Bluetooth，请在安全页面中使用 Chrome 或 Edge。"
     },
     instructions: {
         readyTitle: "准备测量",
@@ -197,10 +219,10 @@ export const translations = {
 
 export const t = (key: string, lang: Language): string => {
   const keys = key.split('.');
-  let current: any = translations[lang];
+  let current: unknown = translations[lang];
   for (const k of keys) {
-    if (current[k] === undefined) return key;
-    current = current[k];
+    if (typeof current !== 'object' || current === null || !(k in current)) return key;
+    current = (current as Record<string, unknown>)[k];
   }
-  return current;
+  return typeof current === 'string' ? current : key;
 };

@@ -32,10 +32,9 @@ export const evaluateBodyFat = (fat: number, gender: Gender): 'low' | 'normal' |
   }
 };
 
-export const evaluateMuscle = (rate: number, gender: Gender): 'low' | 'normal' | 'high' => {
-    // Simplified approximations
-    const min = gender === Gender.Male ? 40 : 30;
-    const max = gender === Gender.Male ? 60 : 50;
+export const evaluateLeanMass = (rate: number, gender: Gender): 'low' | 'normal' | 'high' => {
+    const min = gender === Gender.Male ? 75 : 68;
+    const max = gender === Gender.Male ? 90 : 85;
     
     if (rate < min) return 'low';
     if (rate <= max) return 'normal';
@@ -59,6 +58,17 @@ export const calculateBodyComposition = (
   impedance: number,
   profile: UserProfile
 ): BodyMetrics => {
+  if (!Number.isFinite(weightKg) || weightKg <= 0) {
+    return {
+      bmi: 0,
+      bodyFatPercentage: 0,
+      leanMassRate: 0,
+      waterRate: 0,
+      bmr: 0,
+      bodyFatMethod: 'demographic'
+    };
+  }
+
   const bmi = calculateBMI(weightKg, profile.height);
   
   // Basic Logic for BMR (Basal Metabolic Rate) - Mifflin-St Jeor Equation
@@ -67,29 +77,37 @@ export const calculateBodyComposition = (
 
   // Body Fat Calculation
   const sexFactor = profile.gender === Gender.Male ? 1 : 0;
-  let bodyFat = (1.20 * bmi) + (0.23 * profile.age) - (10.8 * sexFactor) - 5.4;
+  const demographicBodyFat = (1.20 * bmi) + (0.23 * profile.age) - (10.8 * sexFactor) - 5.4;
+  let bodyFat = demographicBodyFat;
+  let bodyFatMethod: BodyMetrics['bodyFatMethod'] = 'demographic';
 
-  // Impedance Correction
-  if (impedance > 0 && impedance < 5000) {
-      const LBM = (0.34 * Math.pow(profile.height, 2) / impedance) + (0.1534 * profile.height) + (0.273 * weightKg) - (0.127 * profile.age) + 12.44;
-      const calculatedFatFromImp = ((weightKg - LBM) / weightKg) * 100;
-      bodyFat = (bodyFat + calculatedFatFromImp) / 2;
+  // Single-frequency BIA estimate. Values outside the range commonly produced by
+  // foot-to-foot consumer scales are ignored instead of distorting the result.
+  if (Number.isFinite(impedance) && impedance >= 200 && impedance <= 1500) {
+      const impedanceIndex = Math.pow(profile.height, 2) / impedance;
+      const fatFreeMassKg = (0.61 * impedanceIndex) + (0.25 * weightKg) + 1.31;
+      const impedanceBodyFat = ((weightKg - fatFreeMassKg) / weightKg) * 100;
+
+      if (impedanceBodyFat >= 3 && impedanceBodyFat <= 55) {
+        // Demographic inputs dampen the sensitivity of a single impedance reading.
+        bodyFat = (impedanceBodyFat * 0.7) + (demographicBodyFat * 0.3);
+        bodyFatMethod = 'bia';
+      }
   }
 
   // Clamping
   bodyFat = Math.max(2, Math.min(60, bodyFat));
 
-  // Water Rate estimation
-  const waterRate = (100 - bodyFat) * 0.7;
-
-  // Muscle Rate estimation
-  const muscleRate = (100 - bodyFat - 4); // Minus bone mass approx
+  const leanMassRate = 100 - bodyFat;
+  // Fat-free mass is approximately 73.2% water; this is still an estimate.
+  const waterRate = leanMassRate * 0.732;
 
   return {
     bmi,
     bodyFatPercentage: Number(bodyFat.toFixed(1)),
     bmr: Math.round(bmr),
     waterRate: Number(waterRate.toFixed(1)),
-    muscleRate: Number(muscleRate.toFixed(1))
+    leanMassRate: Number(leanMassRate.toFixed(1)),
+    bodyFatMethod
   };
 };
